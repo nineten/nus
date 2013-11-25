@@ -1,0 +1,10 @@
+﻿#define cost 15;
+var n=0;
+
+Drink() = [n<cost]insert_5c{n=n+5;} -> Drink()
+		[] [n<cost]insert_10c{n=n+10;} -> Drink()
+		[] [n<cost]insert_20c{n=n+20;} -> Drink()
+		[] [n>=cost]dispense_can -> change.(n-1){n=0;} -> Drink();
+
+#assert Drink() deadlockfree;
+#assert Drink() ;

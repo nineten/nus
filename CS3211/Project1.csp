@@ -1,0 +1,73 @@
+﻿#define MAX 1;
+#alphabet RemoteSender {send_data.2,send_data.1,send_data.0};
+#alphabet RemoteSendAlarm {send_alarm_data.2,send_alarm_data.1,send_alarm_data.0};
+
+#alphabet RemoteSend{send_data.i};
+#alphabet RemoteSendIntrusion {send_alarm_data.i};
+
+#alphabet WaitAck {remote_recieve_ack.i,remote_recieve_ack_schedule.i};
+#alphabet WaitAckIntrusion{remote_recieve_ack_alarm.i,remote_recieve_ack_alarm_schedule.i};
+
+// remote device
+RemoteDevice() = MonitoringSystem() ||| IntrusionAlarm();
+
+// monitoring system
+MonitoringSystem() = wait_monitor_time -> RecordData();
+					
+RecordData() = take_data -> RemoteSender();
+
+RemoteSender() = wait_send_time -> RemoteSend(0);
+RemoteSend(i) =    [i<=MAX] send_data.i -> WaitAck(i)
+                [] [i>MAX] max_tries_reached_alert -> MonitoringSystem();
+
+WaitAck(i) =    remote_recieve_ack.i -> MonitoringSystem()
+             [] wait_timeout.i -> RemoteSend(i+1)
+             [] remote_recieve_ack_schedule.i -> update_schedule -> MonitoringSystem();
+// end of monitoring system
+
+// intrusion alarm
+IntrusionAlarm() =    triggered -> RemoteSendAlarm() 
+                   [] not_triggered -> IntrusionAlarm();
+
+RemoteSendAlarm() = wait_send_alarm -> RemoteSendIntrusion(0);
+RemoteSendIntrusion(i) =    [i<=MAX]send_alarm_data.i -> WaitAckIntrusion(i)
+                         [] [i>MAX] max_tries_reached_alert -> IntrusionAlarm();
+		
+WaitAckIntrusion(i) =    remote_recieve_ack_alarm.i -> IntrusionAlarm()
+                      [] wait_timeout_alarm.i -> RemoteSendIntrusion(i+1)
+                      [] remote_recieve_ack_alarm_schedule.i -> update_schedule -> IntrusionAlarm();
+// end of intrusion alarm
+
+// security console
+SecurityConsole() =    ([] i:{0..MAX} @ (send_alarm_data.i -> save_alarm_data -> ( remote_recieve_ack_alarm.i -> SecurityConsole() [] remote_recieve_ack_alarm_schedule.i -> SecurityConsole())))
+                    [] ([] i:{0..MAX} @ (send_data.i -> save_data -> ( remote_recieve_ack.i -> SecurityConsole() [] remote_recieve_ack_schedule.i -> SecurityConsole())));
+// end of security console
+
+// system
+System() = (SecurityConsole() || RemoteDevice());
+
+
+
+// Assertions
+#assert IntrusionAlarm() deadlockfree;
+#assert MonitoringSystem() deadlockfree;
+#assert RemoteDevice() deadlockfree;
+#assert SecurityConsole() deadlockfree;
+#assert System() deadlockfree;
+#assert System() |= [](triggered -> <>save_alarm_data);
+
+//Test if system is triggered, it will send alarm data
+#assert System() |= (triggered -> <>send_alarm_data);
+
+//Test if IntrustionAlarm will timeout properly
+#assert IntrusionAlarm() |= [](wait_timeout_alarm.1 -> <>max_tries_reached_alert);
+
+//Test if there is a trace that will trigger and then eventually save_alarm_data
+Test1Proc() = triggered -> save_alarm_data -> Stop();
+Test1() = Test1Proc() || System();
+#assert Test1() refines System();
+
+//Test if there is a trace that will wait_monitor_time and then eventually save_data
+Test2Proc() = wait_monitor_time -> save_data -> Stop();
+Test2() = Test2Proc() || System();
+#assert Test2() refines System();

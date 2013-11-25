@@ -1,0 +1,3 @@
+let p = [First:10, Second:20]
+in p.First + p.Second
+end

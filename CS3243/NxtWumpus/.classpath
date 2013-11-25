@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<classpath>
+	<classpathentry kind="src" path=""/>
+	<classpathentry kind="con" path="org.eclipse.jdt.launching.JRE_CONTAINER"/>
+	<classpathentry kind="lib" path="D:/leJOS NXJ/lib/classes.jar"/>
+	<classpathentry kind="lib" path="D:/leJOS NXJ/lib/jtools.jar"/>
+	<classpathentry kind="lib" path="D:/leJOS NXJ/lib/pccomm.jar"/>
+	<classpathentry kind="lib" path="D:/leJOS NXJ/lib/pctools.jar"/>
+	<classpathentry kind="output" path=""/>
+</classpath>

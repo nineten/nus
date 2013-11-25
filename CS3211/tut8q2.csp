@@ -1,0 +1,19 @@
+﻿channel p 1;
+channel q 2;
+channel r 3;
+Schedule() = p!3 -> endP -> q!2 -> endQ -> r!1 -> endR-> Schedule();
+P() = p?pslots -> DoP(pslots);
+DoP(i) = [i>0] doP -> DoP(i-1)
+		[] [i==0] endP -> P();
+		
+Q() = q?qslots -> DoQ(qslots);
+DoQ(i) = [i>0] doQ -> DoQ(i-1)
+		[] [i==0] endQ -> Q();
+		
+R() = r?rslots -> DoR(rslots);
+DoR(i) = [i>0] doR -> DoR(i-1)
+		[] [i==0] endR -> R();
+		
+System() = Schedule() || P() || Q() ||R();
+
+#assert Schedule() deadlockfree;

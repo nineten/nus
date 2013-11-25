@@ -1,0 +1,61 @@
+// JavaCup specification for a simple expression evaluator (w/ actions)
+ 
+package ePLparser;
+
+import ePL.*;
+import java_cup.runtime.*;
+import java.util.*;
+
+/* Terminals (tokens returned by the scanner). */
+
+terminal String    INTEGER;
+
+terminal           TRUE, FALSE, 
+		   LPAREN, RPAREN, 
+                   EQUAL, LESS, GREATER, PLUS, MINUS, 
+                   TIMES, DIV, AND, OR, NEG;
+
+/* Non terminals */
+non terminal Expression expression;
+
+/* Precedences */
+precedence left OR;            /* lowest precedence */
+precedence left AND;
+precedence nonassoc NEG;
+precedence nonassoc EQUAL, GREATER, LESS;
+precedence left PLUS, MINUS;
+precedence left TIMES, DIV;
+precedence nonassoc LPAREN, RPAREN; /* highest precedence */
+
+/* The grammar */
+expression ::= 
+           INTEGER:x
+           {: RESULT = new IntConstant(x); :}
+         | TRUE
+           {: RESULT = new BoolConstant("true"); :}
+         | FALSE
+           {: RESULT = new BoolConstant("false"); :}
+         | expression:e1 PLUS expression:e2
+           {: RESULT = new BinaryPrimitiveApplication("+",e1,e2); :}
+         | expression:e1 MINUS expression:e2
+           {: RESULT = new BinaryPrimitiveApplication("-",e1,e2); :}
+         | expression:e1 TIMES expression:e2
+           {: RESULT = new BinaryPrimitiveApplication("*",e1,e2); :}
+         | expression:e1 DIV expression:e2
+           {: RESULT = new BinaryPrimitiveApplication("/",e1,e2); :}
+         | expression:e1 AND expression:e2
+           {: RESULT = new BinaryPrimitiveApplication("&",e1,e2); :}
+         | expression:e1 OR expression:e2
+           {: RESULT = new BinaryPrimitiveApplication("|",e1,e2); :}
+         | NEG expression:e
+           {: RESULT = new UnaryPrimitiveApplication("\\",e); :}
+         | expression:e1 GREATER expression:e2
+           {: RESULT = new BinaryPrimitiveApplication(">",e1,e2); :}
+         | expression:e1 LESS expression:e2
+           {: RESULT = new BinaryPrimitiveApplication("<",e1,e2); :}
+         | expression:e1 EQUAL expression:e2
+           {: RESULT = new BinaryPrimitiveApplication("=",e1,e2); :}
+         | LPAREN expression:e RPAREN
+           {: RESULT = e; :}
+         ;
+

@@ -1,0 +1,12 @@
+package eVM; 
+
+public class BoolValue implements Value {
+  public boolean value;
+  public BoolValue(boolean v) {
+    value = v;
+  }
+  public String toString() {
+    return Boolean.toString(value);
+  }
+}
+

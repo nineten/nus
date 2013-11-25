@@ -1,0 +1,8 @@
+(
+	recfun pow {int*int*(int->int)->int} n a g =
+		if n = 0 then a
+			else (pow (n-1) (g a) g)
+		end
+	end
+	10 1 (fun {int->int} x -> 2*x)
+}

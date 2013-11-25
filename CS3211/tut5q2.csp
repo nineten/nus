@@ -1,0 +1,13 @@
+﻿var n=0;
+
+Lift() = enter -> Lift() [] exit -> Lift() [] move -> Lift();
+
+SafeProp() = [n<10]enter{n=n+1;} -> SafeProp()
+		
+			[] [n>0]exit{n=n-1;} -> SafeProp();
+
+SafeLift() = Lift() || SafeProp();
+
+#define noElevenPeople(n<=10);
+#assert SafeLift() |= [] noElevenPeople;
+#assert SafeLift() refines Lift();

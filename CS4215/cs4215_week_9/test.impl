@@ -1,0 +1,12 @@
+let count = fun xs x -> while \\(empty xs)
+						do 	x := x + xs.First;
+							xs := xs.Second;
+						end
+			end
+in
+	let
+		xx = 1::2::3::[]
+	in
+		(count xx 0)
+	end
+end

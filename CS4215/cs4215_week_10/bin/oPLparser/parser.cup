@@ -1,0 +1,236 @@
+// JavaCup specification for a simple expression evaluator (w/ actions)
+
+package oPLparser;
+
+import oPL.*;
+import java_cup.runtime.*;
+
+import java.util.*;
+
+/* Terminals (tokens returned by the scanner). */
+
+terminal String    IDENTIFIER;
+terminal String    PROPERTY;
+terminal Integer   INTEGER;
+
+terminal           TRUE, FALSE, RECFUN, FUN, END, 
+		   ARROW, LPAREN, RPAREN, 
+                   EQUAL, LESS, GREATER, PLUS, MINUS, 
+                   TIMES, DIV, AND, OR, NEG, IF, THEN, ELSE, LET, IN,
+		   LBRACKET, RBRACKET, PAIR, COLON, COMMA, DOT, EMPTY, 
+		   HASPROPERTY, 
+                   WHILE, DO, SEMICOLON, ASSIGN,
+		   CLASS, METHOD, EXTENDS;
+
+/* Non terminals */
+non terminal Expression expression;
+non terminal Vector<Expression> notEmptyExpressionList;
+non terminal Vector<Expression> expressionList;
+non terminal Vector<String> notEmptyIdentifierList;
+non terminal Vector<String> identifierList;
+non terminal Vector<Association> associationListRest;
+non terminal Vector<Association> associationList;
+non terminal LetDefinition letDefinition;
+non terminal Vector<LetDefinition> notEmptyLetDefinitionList;
+non terminal Vector<LetDefinition> letDefinitionList;
+non terminal Vector methodList;
+non terminal Association method;
+
+/* Precedences */
+precedence left LET; /* lowest precedence */
+precedence left SEMICOLON; 
+precedence left FUN, IF, WHILE, CLASS, METHOD, EXTENDS;
+precedence right ARROW;
+precedence right ASSIGN;
+precedence right PAIR;
+precedence left OR;            
+precedence left AND;
+precedence nonassoc NEG;
+precedence nonassoc EMPTY, HASPROPERTY;
+precedence nonassoc EQUAL, GREATER, LESS;
+precedence left PLUS, MINUS;
+precedence left TIMES, DIV;
+precedence left DOT;
+precedence nonassoc LPAREN, RPAREN;  /* highest precedence */
+
+/* The grammar */
+expression ::= 
+           IDENTIFIER:s
+           {: RESULT = new Variable(s); :}
+         | PROPERTY:p
+           {: RESULT = new PropertyConstant(p); :}
+         | INTEGER:x
+           {: RESULT = new IntConstant(x.intValue()); :}
+         | TRUE
+           {: RESULT = new BoolConstant(true); :}
+         | FALSE
+           {: RESULT = new BoolConstant(false); :}
+         | expression:e1 PLUS expression:e2
+           {: RESULT = new BinaryPrimitiveApplication("+",e1,e2); :}
+         | expression:e1 MINUS expression:e2
+           {: RESULT = new BinaryPrimitiveApplication("-",e1,e2); :}
+         | expression:e1 TIMES expression:e2
+           {: RESULT = new BinaryPrimitiveApplication("*",e1,e2); :}
+         | expression:e1 DIV expression:e2
+           {: RESULT = new BinaryPrimitiveApplication("/",e1,e2); :}
+         | expression:e1 AND expression:e2
+           {: RESULT = new BinaryPrimitiveApplication("&",e1,e2); :}
+         | expression:e1 OR expression:e2
+           {: RESULT = new BinaryPrimitiveApplication("|",e1,e2); :}
+         | NEG expression:e
+           {: RESULT = new UnaryPrimitiveApplication("\\",e); :}
+         | expression:e1 GREATER expression:e2
+           {: RESULT = new BinaryPrimitiveApplication(">",e1,e2); :}
+         | expression:e1 LESS expression:e2
+           {: RESULT = new BinaryPrimitiveApplication("<",e1,e2); :}
+         | expression:e1 EQUAL expression:e2
+           {: RESULT = new BinaryPrimitiveApplication("=",e1,e2); :}
+         | IF expression:e1 THEN expression:e2 ELSE expression:e3 END
+           {: RESULT = new If(e1,e2,e3); :}
+	   %prec IF
+         | LET notEmptyLetDefinitionList:lds IN expression:e END
+           {: RESULT = new Let(lds,e); :}
+	   %prec LET
+         | FUN notEmptyIdentifierList:xs ARROW expression:e END
+	   {: RESULT = new Fun(xs,e); :}
+	   %prec FUN
+         | RECFUN IDENTIFIER:f notEmptyIdentifierList:xs ARROW expression:e END
+	   {: RESULT = new RecFun(f,xs,e); :}
+         | LPAREN expression:e RPAREN
+           {: RESULT = e; :}
+         | LPAREN expression:e notEmptyExpressionList:es RPAREN
+           {: RESULT = new Application(e,es); :}
+	 | LBRACKET associationList:as RBRACKET
+	   {: RESULT = new Record(as); :}
+	 | expression:e1 PAIR expression:e2
+	   {: 
+	      Vector<Association> as = new Vector<Association>();
+	      as.insertElementAt(new Association("Second",e2),0);
+	      as.insertElementAt(new Association("First",e1),0);
+	      RESULT = new Record(as); 
+           :}
+	 | expression:e1 DOT expression:e2
+	   {: RESULT = new BinaryPrimitiveApplication(".",e1,e2); :}
+	 | EMPTY expression:e
+	   {: RESULT = new UnaryPrimitiveApplication("empty",e); :}
+	 | expression:e1 HASPROPERTY expression:e2
+	   {: RESULT = new BinaryPrimitiveApplication("hasproperty",e1,e2); :}
+         | expression:e1 SEMICOLON expression:e2
+           {: RESULT = new Sequence(e1,e2); :}
+         | WHILE expression:e1 DO expression:e2 END
+           {: RESULT = new While(e1,e2); :}
+	   %prec WHILE
+         | IDENTIFIER:x ASSIGN expression:e
+           {: RESULT = new Assignment(x,e); :}
+         | expression:e1 ASSIGN expression:e2
+           {: if (e1 instanceof Variable) {
+	         RESULT = new Assignment(((Variable) e1).varname,e2); 
+              } else {
+		 if ((e1 instanceof BinaryPrimitiveApplication)
+                     && ((BinaryPrimitiveApplication) e1).operator.equals(".")) {
+	         RESULT = new RecordAssignment(
+				((BinaryPrimitiveApplication) e1).argument1,
+				((BinaryPrimitiveApplication) e1).argument2,
+				e2);
+		 } else System.out.println("parse error before :=");
+              };
+            :}
+         | expression:e1 DOT PROPERTY:p LPAREN expressionList:args RPAREN
+           {: Vector lds = new Vector();
+	      LetDefinition ld = new LetDefinition("obj",e1);
+	      lds.insertElementAt(ld,0);
+	      args.insertElementAt(new Variable("obj"),0);
+	      Vector lookupArgs = new Vector();
+	      lookupArgs.insertElementAt(new Variable("obj"),0);
+	      lookupArgs.insertElementAt(new PropertyConstant(p),1);
+	      Expression lookupResult = new LookupApplication(
+			new Variable("lookup"),
+				     lookupArgs);
+	      Expression body = new Application(lookupResult,args);
+              RESULT = new Let(lds,body); :}
+         | CLASS methodList:ms END
+           {: RESULT = new Record(ms); :}
+
+         | CLASS EXTENDS expression:e methodList:ms END
+           {: ms.insertElementAt(new Association("Parent",e),0);
+	      RESULT = new Record(ms); :}
+         ;
+
+methodList ::= 
+           method:m methodList:ms
+           {: ms.insertElementAt(m,0); RESULT = ms; :}
+	 | // nothing here
+           {: RESULT = new Vector(); :}
+         ;
+
+method   ::=
+           METHOD PROPERTY:p LPAREN identifierList:is RPAREN 
+  	   ARROW expression:e END
+           {: is.insertElementAt("this",0);
+	      RESULT = new Association(p,new Fun(is,e)); :}
+	 ;
+
+associationListRest
+         ::=
+	   COMMA PROPERTY:p COLON expression:e associationListRest:as
+	   {: as.insertElementAt(new Association(p,e),0); RESULT = as; :}
+	 | // nothing here
+           {: RESULT = new Vector<Association>(); :}
+	;
+
+associationList
+	::= 
+           PROPERTY:p COLON expression:e associationListRest:as
+           {: as.insertElementAt(new Association(p,e),0); RESULT = as; :}
+	 | // nothing here
+           {: RESULT = new Vector<Association>(); :}
+         ;
+
+notEmptyIdentifierList 
+         ::=
+	   IDENTIFIER:i identifierList:is
+	   {: is.insertElementAt(i,0); RESULT = is; :}
+	;
+
+identifierList
+	::= 
+           IDENTIFIER:i identifierList:is
+           {: is.insertElementAt(i,0); RESULT = is; :}
+	 | // nothing here
+           {: RESULT = new Vector<String>(); :}
+         ;
+
+notEmptyExpressionList
+	::=
+	   expression:e expressionList:es
+	   {: es.insertElementAt(e,0); RESULT = es; :}
+	;
+
+expressionList
+	::= 
+           expression:e expressionList:es
+           {: es.insertElementAt(e,0); RESULT = es; :}
+	 | // nothing here
+           {: RESULT = new Vector<Expression>(); :}
+         ;
+
+letDefinition 
+	::=
+           IDENTIFIER:x EQUAL expression:e
+	   {: RESULT = new LetDefinition(x,e); :}
+	 ;
+
+notEmptyLetDefinitionList
+	::=
+	   letDefinition:ld letDefinitionList:lds
+	   {: lds.insertElementAt(ld,0); RESULT = lds; :}
+	;
+
+letDefinitionList
+	::= 
+           letDefinition:ld letDefinitionList:lds
+           {: lds.insertElementAt(ld,0); RESULT = lds; :}
+	 | // nothing here
+           {: RESULT = new Vector<LetDefinition>(); :}
+         ;
+

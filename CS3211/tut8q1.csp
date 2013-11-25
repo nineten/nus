@@ -1,0 +1,16 @@
+﻿#define N 4;
+Cntrl(i) = [i>0] arrive -> Cntrl(i-1)
+[] [i<N] depart -> Cntrl(i+1);
+Arrivals() = arrive -> Arrivals();
+Departures() = depart -> Departures();
+CarPark() = Arrivals()
+|| Departures()
+|| Cntrl(N);
+
+Test() = Cntrl(N+1);
+Test2() = Cntrl(0);
+
+#assert Test refines CarPark;
+#assert Test2 refines CarPark;
+
+#assert CarPark() |= <>arrive;

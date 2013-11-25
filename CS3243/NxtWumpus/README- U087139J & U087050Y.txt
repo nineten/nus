@@ -1,0 +1,17 @@
+Matric Number: U087139J			Matric Number: U087050Y
+Email: u0807139@nus.edu.sg		Email: u0807050@nus.edu.sg
+
+Our robot will definitely find the gold if there is a totally safe path.
+Our definition of totally safe path is:
+-there will exist a path where you will definitely know you won't fall into a pit, without having to any risk
+-if there is a wumpus obstructing the path, our robot is able to kill it.
+
+Our robot is able to detect and kill the wumpus almost in all situation. 
+It will fire an arrow with 4 beeping sound.It will not wait for any response, as our robot is definitely sure it will kill the wumpus the moment it fires the arrow.
+
+Our robot will always move forward. Upon detecting a stench, it will try to detect the wumpus and then kill it. 
+After killing it, it will then proceed as per normal. Upon failure to detect the position of the wumpus, it will treat it as a pit and take a step backward.
+Our robot will always take a step back upon detecting a breeze or the boundaries. Then it will proceed to the right of the tile.
+If the right tile is also an invalid or a risky move, then it will move to the left tile. If the left tile is also invalid or risky, it will then backtrack.
+
+Upon detecting the gold, it will immediately grab the gold producing 3 beeping sequence up sound. Then it will backtrack its path to exit the wumpus world.

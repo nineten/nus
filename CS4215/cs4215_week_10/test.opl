@@ -1,0 +1,70 @@
+let stack = 
+
+class method Makeempty() -> this.Content := []; this
+
+      end
+
+      method Push(x) -> this.Content := x :: this.Content
+
+      end
+
+      method Pop() -> let top = this.Content.First in
+
+           this.Content := this.Content.Second;
+
+           top
+
+            end
+
+      end
+
+      method Pushtwice(x) -> this.Push(x); this.Push(x) end
+
+   end
+
+in
+
+let stackWithTop = 
+
+ class extends stack
+
+  method Top() -> this.Content.First
+
+  end
+
+ end
+
+in
+
+ let mystack = (new stack)
+
+  anotherstack = (new stackWithTop)
+
+  x = 10
+
+ in
+
+  anotherstack.Makeempty();
+
+  
+
+  while \ x = 0 do
+
+    anotherstack.Push(1);
+
+    anotherstack.Push(1);
+
+    x := x - 1
+
+  end;
+
+      anotherstack.Push(1)
+
+  
+
+
+ end
+
+  end
+
+end

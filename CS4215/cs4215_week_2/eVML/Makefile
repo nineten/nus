@@ -1,0 +1,11 @@
+FILENAMES = LDCI LDCB PLUS TIMES MINUS DIV AND OR NOT GT LT EQ DONE INSTRUCTION OPCODES 
+
+CLASSFILES = $(FILENAMES:%=%.class)
+
+all: $(CLASSFILES)
+
+%.class: %.java
+	javac $?
+
+clean:
+	rm *.class *~

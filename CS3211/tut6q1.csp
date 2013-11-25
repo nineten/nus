@@ -1,0 +1,13 @@
+﻿#define TOTAL_N 1;
+#define MAX_N 1;
+var flag = 0;
+
+N(i) = raise_flag.i{flag++} -> ([flag<=MAX_N]pick_berries.i -> drop_flag.i{flag--} -> N(i) [] [flag>MAX_N]drop_flag.i{flag--} -> N(i));
+
+System() = || i:{0..TOTAL_N} @ N(i);
+
+#assert System() deadlockfree;
+
+#define flagNotMoreThanTwo (flag<=MAX_N);
+#assert System() |= flagNotMoreThanTwo;
+#assert System() |= raise_flag.0 -> pick_berries.0;

@@ -1,0 +1,178 @@
+// JavaCup specification for a simple expression evaluator (w/ actions)
+
+package simPLparser;
+
+import simPL.*;
+import java_cup.runtime.*;
+
+import java.util.*;
+
+action code {:
+
+private class TimesType implements Type {
+    public Type leftType, rightType;
+    public TimesType(Type lt, Type rt) {
+	leftType = lt;
+	rightType = rt;
+    }
+    public Vector<Type> toVector() {
+	Vector<Type> lv = leftType.toVector();
+	Vector<Type> rv = rightType.toVector();
+	Enumeration<Type> re=rv.elements();
+	while (re.hasMoreElements()) {
+	    lv.addElement(re.nextElement());
+	}
+	return lv;
+    }
+    public String toString() {
+	return "(" + leftType + " * " + rightType + ")";
+    }
+    public String toXML() {
+	return "";
+    }
+}
+
+:}
+
+/* Terminals (tokens returned by the scanner). */
+terminal String    IDENTIFIER;
+terminal Integer       INTEGER;
+
+terminal           TRUE, FALSE, RECFUN, FUN, END, 
+		   ARROW, LPAREN, RPAREN, LCURLY, 
+                   RCURLY, INT, BOOL, EQUAL, LESS, GREATER, PLUS, MINUS, 
+                   TIMES, DIV, AND, OR, NEG, IF, THEN, ELSE, LET, IN;
+
+/* Non terminals */
+non terminal Expression expression;
+non terminal Vector<Expression> notEmptyExpressionList;
+non terminal Vector<Expression> expressionList;
+non terminal Vector<String> notEmptyIdentifierList;
+non terminal Vector<String> identifierList;
+non terminal Type type;
+non terminal LetDefinition letDefinition;
+non terminal Vector<LetDefinition> notEmptyLetDefinitionList;
+non terminal Vector<LetDefinition> letDefinitionList;
+
+
+/* Precedences */
+precedence left IF, LET;       /* lowest precedence */
+precedence right ARROW;
+precedence left OR;            
+precedence left AND;
+precedence nonassoc NEG;
+precedence nonassoc EQUAL, GREATER, LESS;
+precedence left PLUS, MINUS;
+precedence left TIMES, DIV;
+precedence nonassoc LPAREN, RPAREN;
+precedence nonassoc LCURLY, RCURLY;
+precedence nonassoc BOOL, INT;      /* highest precedence */
+
+/* The grammar */
+expression ::= 
+           IDENTIFIER:s
+           {: RESULT = new Variable(s); :}
+         | INTEGER:x
+           {: RESULT = new IntConstant(x.intValue()); :}
+         | TRUE
+           {: RESULT = new BoolConstant(true); :}
+         | FALSE
+           {: RESULT = new BoolConstant(false); :}
+         | expression:e1 PLUS expression:e2
+           {: RESULT = new BinaryPrimitiveApplication("+",e1,e2); :}
+         | expression:e1 MINUS expression:e2
+           {: RESULT = new BinaryPrimitiveApplication("-",e1,e2); :}
+         | expression:e1 TIMES expression:e2
+           {: RESULT = new BinaryPrimitiveApplication("*",e1,e2); :}
+         | expression:e1 DIV expression:e2
+           {: RESULT = new BinaryPrimitiveApplication("/",e1,e2); :}
+         | expression:e1 AND expression:e2
+           {: RESULT = new BinaryPrimitiveApplication("&",e1,e2); :}
+         | expression:e1 OR expression:e2
+           {: RESULT = new BinaryPrimitiveApplication("|",e1,e2); :}
+         | NEG expression:e
+           {: RESULT = new UnaryPrimitiveApplication("\\",e); :}
+         | expression:e1 GREATER expression:e2
+           {: RESULT = new BinaryPrimitiveApplication(">",e1,e2); :}
+         | expression:e1 LESS expression:e2
+           {: RESULT = new BinaryPrimitiveApplication("<",e1,e2); :}
+         | expression:e1 EQUAL expression:e2
+           {: RESULT = new BinaryPrimitiveApplication("=",e1,e2); :}
+         | IF expression:e1 THEN expression:e2 ELSE expression:e3 END
+           {: RESULT = new If(e1,e2,e3); :}
+         | LET notEmptyLetDefinitionList:lds IN LCURLY type:t RCURLY expression:e END
+           {: RESULT = new Let(lds,t,e); :}
+	   %prec LET
+         | FUN 
+           LCURLY type:t RCURLY notEmptyIdentifierList:xs ARROW expression:e END
+	   {: RESULT = new Fun(t,xs,e); :}
+         | RECFUN IDENTIFIER:f 
+           LCURLY type:t RCURLY notEmptyIdentifierList:xs ARROW expression:e END
+	   {: RESULT = new RecFun(f,t,xs,e); :}
+         | LPAREN expression:e RPAREN
+           {: RESULT = e; :}
+         | LPAREN expression:e notEmptyExpressionList:es RPAREN
+           {: RESULT = new Application(e,es); :}
+         ;
+
+type     ::= 
+         | BOOL
+           {: RESULT = new BoolType(); :}
+         | INT
+           {: RESULT = new IntType(); :}
+         |  type:t1 ARROW type:t2
+           {: RESULT = new FunType(t1.toVector(),t2); :}
+         |  type:t1 TIMES type:t2
+           {: RESULT = new TimesType(t1,t2); :}
+         | LPAREN type:t RPAREN
+           {: RESULT = t; :}
+         ;
+
+notEmptyIdentifierList 
+         ::=
+	   IDENTIFIER:i identifierList:is
+	   {: is.insertElementAt(i,0); RESULT = is; :}
+	;
+
+identifierList
+	::= 
+           IDENTIFIER:i identifierList:is
+           {: is.insertElementAt(i,0); RESULT = is; :}
+	 | // nothing here
+           {: RESULT = new Vector<String>(); :}
+         ;
+
+notEmptyExpressionList
+	::=
+	   expression:e expressionList:es
+	   {: es.insertElementAt(e,0); RESULT = es; :}
+	;
+
+expressionList
+	::= 
+           expression:e expressionList:es
+           {: es.insertElementAt(e,0); RESULT = es; :}
+	 | // nothing here
+           {: RESULT = new Vector<Expression>(); :}
+         ;
+
+letDefinition 
+	::=
+           LCURLY type:t RCURLY IDENTIFIER:x EQUAL expression:e
+	   {: RESULT = new LetDefinition(t,x,e); :}
+	 ;
+
+notEmptyLetDefinitionList
+	::=
+	   letDefinition:ld letDefinitionList:lds
+	   {: lds.insertElementAt(ld,0); RESULT = lds; :}
+	;
+
+letDefinitionList
+	::= 
+           letDefinition:ld letDefinitionList:lds
+           {: lds.insertElementAt(ld,0); RESULT = lds; :}
+	 | // nothing here
+           {: RESULT = new Vector<LetDefinition>(); :}
+         ;
+

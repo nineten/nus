@@ -1,0 +1,14 @@
+﻿#define N 4;
+var i = 0; 
+Cntrl() = [i<=N] arrive -> incCount{i++}-> Cntrl()
+[] [i>0] depart -> decCount{i--} ->Cntrl();
+Arrivals() = arrive -> Arrivals();
+Departures() = depart -> Departures();
+CarPark() = Arrivals()
+|| Departures()
+|| Cntrl();
+
+#define countInRange ((i<=4)&&(i>=0));
+#assert CarPark() |= countInRange;
+
+#assert CarPark() deadlockfree;

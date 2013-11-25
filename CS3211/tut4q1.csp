@@ -1,0 +1,19 @@
+﻿#define N 2;
+
+System() =  Variable(0);
+Variable(x) = ||i:{0..N}@(Write(i));
+			
+Read(i) = read.i -> Read2(i);
+Write(i) = write.i -> Write2(i);
+
+Read2(i) = Read(i)
+		[] Stop();
+Write2(i) = Read(i)
+		[] Write(i)
+		[] Stop();
+		
+Trace() = write.2 -> read.2 -> read.2 -> write.1 -> write.0 -> read.0 -> success -> Skip();
+
+Start() = System() || Trace();
+
+#assert Start() |= []<>success;

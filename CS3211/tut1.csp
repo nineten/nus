@@ -1,0 +1,10 @@
+﻿#define unlocked 0;
+#define locked 1;
+var lockA = unlocked;
+var lockB = unlocked;
+t1() = [lockA == unlocked]getLockT1A{lockA=locked;} -> t1b();
+t1b() = [lockB == unlocked]getLockT1B{lockB=locked;} -> DoWork1 -> DoWorkt1();
+DoWorkt1() = ReleaseT1A{lockA=unlocked;} -> ReleaseT1B{lockB=unlocked;} -> t1();
+t2() = [lockB == unlocked]getLockT2A{lockB=locked;} -> t1b();
+t2b() = [lockA == unlocked]getLockT2B{lockA=locked;} -> DoWork2 -> DoWorkt2();
+DoWorkt2() = ReleaseT2B{lockB=unlocked;} -> ReleaseT2A{lockA=unlocked;} -> t2();

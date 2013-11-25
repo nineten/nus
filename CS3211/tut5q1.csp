@@ -1,0 +1,29 @@
+﻿Start() = S6();
+
+S0() = north -> Stop()
+	[] east -> S1();
+
+S1() = west -> S0()
+	[] east -> S2()
+	[] south -> S4();
+	
+S2() = west -> S1()
+	[] south -> S5();
+	
+S3() = east -> S4()
+	[] south -> S6();
+	
+S4() = north -> S1()
+	[] west -> S3();
+
+S5() = north -> S2()
+	[] south -> S8();
+	
+S6() = north -> S3();
+
+S7() = east -> S8();
+
+S8() = west -> S7()
+	[] north -> S5();
+	
+#assert Start() deadlockfree;

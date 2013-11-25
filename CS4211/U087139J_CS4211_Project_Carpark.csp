@@ -1,0 +1,72 @@
+﻿// Done by  : Ma Zhencai Jayden
+// Matic no : U087139J
+
+#define NO_OF_CARS 2; // Specifys number of cars that are in this world.
+#define MAX_LOTS 2; // Specifys maximum lots in the carpark.
+
+channel car_at_entry 0;
+channel car_enter 0;
+channel car_at_exit 0;
+channel car_exit 0;
+channel make_payment 0;
+
+var car_count = 0;
+
+// Car is modelled to the actions it can take.
+Car(i) = Car_Enter(i);
+Car_Enter(i) = car_at_entry!i -> car_enter!i -> Car_Parked(i);
+Car_Parked(i) = car_parked.i -> Car_Exit(i);
+
+// Upon reaching the exit, the gantry will detect and the payment engine will see if the car has enough money.
+// The car can then make leave if payment is made, or do other actions if payment is not made.
+Car_Exit(i) = car_at_exit!i -> make_payment!i -> (
+				payment_made -> car_exit!i -> Car(i) // Car exits if theres enough payment. 
+				[] insufficient_funds -> (
+										Car_Parked(i) // The car goes back to parking and decides what to do before trying to exit again.
+										[] Car_Exit(i) // The car tries to exit again with maybe a different cashcard or the same one.
+										)
+				);
+
+// The Entry Gantry uses ERP, so no button is pushed.
+Entry_Gantry() = [car_count<MAX_LOTS] car_at_entry?i -> entry_open {car_count++} -> car_enter?i -> entry_close -> Entry_Gantry();
+
+// The Exit Gantry uses ERP, so no button is pushed.
+// The vehicle is checked if it has enough money upon reaching the exit, after which it determines if theres enough money and do the actions.
+Exit_Gantry() = car_at_exit?i -> (
+			payment_made -> exit_open {car_count--;} -> car_exit?i -> exit_close -> Exit_Gantry()
+			[] insufficient_funds -> Exit_Gantry()
+			);
+
+// The Payment control which determines if the payment is made, or theres insufficient money.
+// This synchronises the events in Exit_Gantry and Car_Exit.
+Payment() = make_payment?i -> (
+			payment_made -> Payment()
+			[] insufficient_funds -> Payment()
+			);
+
+SpawnCars() = ||| i:{0..NO_OF_CARS-1}@Car(i);
+
+Carpark() = SpawnCars() || Entry_Gantry() || Exit_Gantry() || Payment();
+
+
+// Assertions
+
+#assert Carpark() deadlockfree;
+
+// checks that car count cannot be lower than 0 and cannot go beyond maximum number of cars
+#define carsCountOutOfRange (car_count>MAX_LOTS || car_count<0);
+#assert Carpark() reaches carsCountOutOfRange;
+
+// a car that enters will eventually exit
+#assert Carpark() |= (car_enter.0 -> <>car_exit.0);
+
+// a car that has paid will eventually exit
+#assert Carpark() |= (payment_made.0 -> <>car_exit.0);
+
+// car 0 and car 1 cannot enter consequetively immediately
+ConsequetiveEntryRun() = car_at_entry.0 -> entry_open -> car_enter.0 -> car_enter.1 -> Skip()
+						[]car_at_entry.0 -> entry_open -> car_enter.1 -> car_enter.0 -> Skip()
+						[]car_at_entry.1 -> entry_open -> car_enter.0 -> car_enter.1 -> Skip()
+						[]car_at_entry.1 -> entry_open -> car_enter.1 -> car_enter.0 -> Skip();
+ConsequetiveEntry() = ConsequetiveEntryRun() || Carpark();
+#assert ConsequetiveEntry() refines Carpark();

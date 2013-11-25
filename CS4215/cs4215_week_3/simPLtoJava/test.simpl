@@ -1,0 +1,7 @@
+(fun {(int -> int) -> int} fact -> (fact 2) end 
+	recfun f {int -> int} x ->
+		if x = 1 then 1
+		else 
+			x * (f (x-1))
+		end
+	end)

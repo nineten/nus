@@ -1,0 +1,176 @@
+// JavaCup specification for a simple expression evaluator (w/ actions)
+
+package simPLparser;
+
+import simPL.*;
+import java_cup.runtime.*;
+
+import java.util.*;
+
+/* Terminals (tokens returned by the scanner). */
+terminal String    IDENTIFIER;
+terminal String    PROPERTY;
+terminal Integer       INTEGER;
+
+terminal           TRUE, FALSE, RECFUN, FUN, END, 
+		   ARROW, LPAREN, RPAREN, 
+                   EQUAL, LESS, GREATER, PLUS, MINUS, 
+                   TIMES, DIV, AND, OR, NEG, IF, THEN, ELSE, LET, IN,
+		   LBRACKET, RBRACKET, PAIR, COLON, COMMA, DOT, EMPTY, 
+		   HASPROPERTY, TRY, CATCH, WITH, THROW;
+
+/* Non terminals */
+non terminal Expression expression;
+non terminal Vector<Expression> notEmptyExpressionList;
+non terminal Vector<Expression> expressionList;
+non terminal Vector<String> notEmptyIdentifierList;
+non terminal Vector<String> identifierList;
+non terminal Vector<Association> associationListRest;
+non terminal Vector<Association> associationList;
+non terminal LetDefinition letDefinition;
+non terminal Vector<LetDefinition> notEmptyLetDefinitionList;
+non terminal Vector<LetDefinition> letDefinitionList;
+
+
+/* Precedences */
+precedence nonassoc THROW; /* lowest precedence */
+precedence left IF, LET, TRY;
+precedence right ARROW;
+precedence right PAIR;
+precedence left OR;            
+precedence left AND;
+precedence nonassoc NEG;
+precedence nonassoc EMPTY, HASPROPERTY;
+precedence nonassoc EQUAL, GREATER, LESS;
+precedence left PLUS, MINUS;
+precedence left TIMES, DIV;
+precedence left DOT;
+precedence nonassoc LPAREN, RPAREN;  /* highest precedence */
+
+/* The grammar */
+expression ::= 
+           IDENTIFIER:s
+           {: RESULT = new Variable(s); :}
+         | INTEGER:x
+           {: RESULT = new IntConstant(x.intValue()); :}
+         | TRUE
+           {: RESULT = new BoolConstant(true); :}
+         | FALSE
+           {: RESULT = new BoolConstant(false); :}
+         | expression:e1 PLUS expression:e2
+           {: RESULT = new BinaryPrimitiveApplication("+",e1,e2); :}
+         | expression:e1 MINUS expression:e2
+           {: RESULT = new BinaryPrimitiveApplication("-",e1,e2); :}
+         | expression:e1 TIMES expression:e2
+           {: RESULT = new BinaryPrimitiveApplication("*",e1,e2); :}
+         | expression:e1 DIV expression:e2
+           {: RESULT = new BinaryPrimitiveApplication("/",e1,e2); :}
+         | expression:e1 AND expression:e2
+           {: RESULT = new BinaryPrimitiveApplication("&",e1,e2); :}
+         | expression:e1 OR expression:e2
+           {: RESULT = new BinaryPrimitiveApplication("|",e1,e2); :}
+         | NEG expression:e
+           {: RESULT = new UnaryPrimitiveApplication("\\",e); :}
+         | expression:e1 GREATER expression:e2
+           {: RESULT = new BinaryPrimitiveApplication(">",e1,e2); :}
+         | expression:e1 LESS expression:e2
+           {: RESULT = new BinaryPrimitiveApplication("<",e1,e2); :}
+         | expression:e1 EQUAL expression:e2
+           {: RESULT = new BinaryPrimitiveApplication("=",e1,e2); :}
+         | IF expression:e1 THEN expression:e2 ELSE expression:e3 END
+           {: RESULT = new If(e1,e2,e3); :}
+         | LET notEmptyLetDefinitionList:lds IN expression:e END
+           {: RESULT = new Let(lds,e); :}
+	   %prec LET
+         | FUN notEmptyIdentifierList:xs ARROW expression:e END
+	   {: RESULT = new Fun(xs,e); :}
+         | RECFUN IDENTIFIER:f notEmptyIdentifierList:xs ARROW expression:e END
+	   {: RESULT = new RecFun(f,xs,e); :}
+         | LPAREN expression:e RPAREN
+           {: RESULT = e; :}
+         | LPAREN expression:e notEmptyExpressionList:es RPAREN
+           {: RESULT = new Application(e,es); :}
+	 | LBRACKET associationList:as RBRACKET
+	   {: RESULT = new Record(as); :}
+	 | expression:e1 PAIR expression:e2
+	   {: 
+	      Vector<Association> as = new Vector<Association>();
+	      as.insertElementAt(new Association("Second",e2),0);
+	      as.insertElementAt(new Association("First",e1),0);
+	      RESULT = new Record(as); 
+           :}
+	 | expression:e DOT PROPERTY:i
+	   {: RESULT = new Dot(e,i); :}
+	 | EMPTY expression:e
+	   {: RESULT = new UnaryPrimitiveApplication("empty",e); :}
+	 | expression:e HASPROPERTY PROPERTY:i
+	   {: RESULT = new Hasproperty(e,i); :}
+         | TRY expression:t CATCH IDENTIFIER:ev WITH expression:w END
+	   {: RESULT = new Try(t,ev,w); :}
+         | THROW expression:e END
+	   {: RESULT = new Throw(e); :}
+         ;
+
+associationListRest
+         ::=
+	   COMMA PROPERTY:p COLON expression:e associationListRest:as
+	   {: as.insertElementAt(new Association(p,e),0); RESULT = as; :}
+	 | // nothing here
+           {: RESULT = new Vector<Association>(); :}
+	;
+
+associationList
+	::= 
+           PROPERTY:p COLON expression:e associationListRest:as
+           {: as.insertElementAt(new Association(p,e),0); RESULT = as; :}
+	 | // nothing here
+           {: RESULT = new Vector<Association>(); :}
+         ;
+
+notEmptyIdentifierList 
+         ::=
+	   IDENTIFIER:i identifierList:is
+	   {: is.insertElementAt(i,0); RESULT = is; :}
+	;
+
+identifierList
+	::= 
+           IDENTIFIER:i identifierList:is
+           {: is.insertElementAt(i,0); RESULT = is; :}
+	 | // nothing here
+           {: RESULT = new Vector<String>(); :}
+         ;
+
+notEmptyExpressionList
+	::=
+	   expression:e expressionList:es
+	   {: es.insertElementAt(e,0); RESULT = es; :}
+	;
+
+expressionList
+	::= 
+           expression:e expressionList:es
+           {: es.insertElementAt(e,0); RESULT = es; :}
+	 | // nothing here
+           {: RESULT = new Vector<Expression>(); :}
+         ;
+
+letDefinition 
+	::= IDENTIFIER:x EQUAL expression:e
+	   {: RESULT = new LetDefinition(x,e); :}
+	 ;
+
+notEmptyLetDefinitionList
+	::=
+	   letDefinition:ld letDefinitionList:lds
+	   {: lds.insertElementAt(ld,0); RESULT = lds; :}
+	;
+
+letDefinitionList
+	::= 
+           letDefinition:ld letDefinitionList:lds
+           {: lds.insertElementAt(ld,0); RESULT = lds; :}
+	 | // nothing here
+           {: RESULT = new Vector<LetDefinition>(); :}
+         ;
+
